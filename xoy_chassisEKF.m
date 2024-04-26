@@ -82,9 +82,9 @@ end
 
 %% ekf init
 F = diag([1,1,1,1,1,1,1,1]);
-% F(1,2) = dt;
-% F(3,4) = dt;
-% F(5,6) = dt;
+F(1,2) = dt;
+F(3,4) = dt;
+F(5,6) = dt;
 
 Pinit = diag([1,1,1,1,1,1,1,1])*0.1;
 P = Pinit;
@@ -143,10 +143,10 @@ switch_count = 0;
 %%
 for k = 2:N
     % 量测噪声更新
-    F(1,2) = dt;
-    F(3,4) = dt;
-    F(5,6) = dt;
-    
+%     F(1,2) = dt;
+%     F(3,4) = dt;
+%     F(5,6) = dt;
+%     
     
     theta_dot(k) = theta_dot(1);
     center_x_dot(k) = 3*cos(0.3*pi*k*dt)*0-1*0;
