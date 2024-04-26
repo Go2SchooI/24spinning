@@ -9,8 +9,8 @@ deltaT2 = table2array(in(2:N+1,1));
 deltaT = (deltaT2 - deltaT1)*1e-9;
 
 tgttheta = table2array(in(1:N,4));
-framex = table2array(in(1:N,3));
-framey = -table2array(in(1:N,2));
+framex = table2array(in(1:N,2));
+framey = table2array(in(1:N,3));
 %% target init
 center_x = zeros(1,N);
 center_y = zeros(1,N);
@@ -135,8 +135,8 @@ r_est = zeros(1,N);
 r_init = 0.25;
 r_buf = r_init;
 xhat(:,1) = [pos(1,1),0,pos(2,1),0,theta_measure(1),0,r_init,r_init].';
-pos_est(:,1) = [xhat(1,1) - xhat(7,1) * cos(xhat(7,1)),...
-    xhat(3,1) - xhat(7,1) * sin(xhat(7,1)),...
+pos_est(:,1) = [xhat(1,1) - xhat(7,1) * cos(xhat(5,1)),...
+    xhat(3,1) - xhat(7,1) * sin(xhat(5,1)),...
     0];
 theta_est(1) = std_rad(xhat(5,1));
 switch_count = 0;
@@ -162,59 +162,7 @@ for k = 2:N
     Q(6,6) = dt * process_noise(3);
     Q(7,7) = dt * process_noise(4);
     Q(8,8) = dt * process_noise(4);
-
     
-    theta_dot(k) = theta_dot(1);
-    center_x_dot(k) = 3*cos(0.3*pi*k*dt)*0-1*0;
-    center_y_dot(k) = -3*sin(0.2*pi*k*dt)*0-1*0;
-    center_x(k) = center_x(k-1) + center_x_dot(k)*dt;
-    center_y(k) = center_y(k-1) + center_y_dot(k)*dt;
-    height0(k) = height0(k-1) + height_dot(k)*dt;
-    height1(k) = height1(k-1) + height_dot(k)*dt;
-    theta(k) = theta(k-1) + theta_dot(k)*dt;
-    theta(k) = std_rad(theta(k));
-    center_angle(k) = atan2(center_y(k), center_x(k));
-
-    % theta_measure(k) represent the angle from pnp
-    if abs(std_rad(theta(k)-center_angle(k))) < pi/4
-        theta_measure(k) = std_rad(theta(k));
-        height(k) = height0(k);
-        r(k) = r0;
-        pos(:,k) = [center_x(k) - r0 * cos(theta_measure(k)),...
-            center_y(k) - r0 * sin(theta_measure(k)),...
-            height0(k)];
-    elseif abs(std_rad(theta(k)+pi/2-center_angle(k))) < pi/4
-        theta_measure(k) = std_rad(theta(k)+pi/2);
-        height(k) = height1(k);
-        r(k) = r1;
-        pos(:,k) = [center_x(k) - r1 * cos(theta_measure(k)),...
-            center_y(k) - r1 * sin(theta_measure(k)),...
-            height1(k)];
-    elseif abs(std_rad(theta(k)+pi-center_angle(k))) < pi/4
-        theta_measure(k) = std_rad(theta(k)+pi);
-        height(k) = height0(k);
-        r(k) = r0;
-        pos(:,k) = [center_x(k) - r0 * cos(theta_measure(k)),...
-            center_y(k) - r0 * sin(theta_measure(k)),...
-            height0(k)];
-    else
-        height(k) = height1(k);
-        r(k) = r1;
-        theta_measure(k) = std_rad(theta(k)-pi/2);
-        pos(:,k) = [center_x(k) - r1 * cos(theta(k)-pi/2),...
-            center_y(k) - r1 * sin(theta(k)-pi/2),...
-            height1(k)];
-    end
-    pos(:,k) = pos(:,k) + normrnd(0,0.01,[3,1]);
-    theta_measure(k) = theta_measure(k) + normrnd(0,0.01,1);
-
-%     height(k) = height0(k);
-%     r(k) = r0;
-%     pos(:,k) = [center_x(k) - r0 * cos(theta(k)),...
-%         center_y(k) - r0 * sin(theta(k)),...
-%         height0(k)];
-%     theta_measure(k) = theta(k);
-
     pos(1,k) = framex(k);
     pos(2,k) = framey(k);
     theta_measure(k) = std_rad(tgttheta(k));
@@ -273,9 +221,6 @@ for k = 2:N
     pos_est(:,k) = [xhatminus(1,k) - xhatminus(7,k) * cos(theta__),...
         xhatminus(3,k) - xhatminus(7,k) * sin(theta__),...
         0];
-
-%     plot(pos(1,1:k),pos(2,1:k), pos_est(1,1:k),pos_est(2,1:k))
-%     pause(0.001);
     
     err = z(:,k)-hx;
     err(3) = std_rad(err(3));
@@ -299,13 +244,13 @@ for k = 2:N
         r_est(k) = xhat(8,k);
     end
 
-    forwardTime = 0.0;
-    theta_predict(k) = xhat(5,k) + forwardTime*xhat(6,k);
-    theta_predict(k) = std_rad(theta_predict(k));
-    theta_predict(k) = angle_process(theta_predict(k),theta_measure(k));
-    x_armor(k) = xhat(1,k) - xhat(7,k)*cos(angle_process(theta_est(k),theta_measure(k)));
-    x_predict(k) = xhat(1,k) + forwardTime*xhat(2,k) - r_est(k) * cos(theta_predict(k));
-    x_predict1(k) = xhat(1,k) - r_est(k) * cos(theta_predict(k));
+%     forwardTime = 0.0;
+%     theta_predict(k) = xhat(5,k) + forwardTime*xhat(6,k);
+%     theta_predict(k) = std_rad(theta_predict(k));
+%     theta_predict(k) = angle_process(theta_predict(k),theta_measure(k));
+%     x_armor(k) = xhat(1,k) - xhat(7,k)*cos(angle_process(theta_est(k),theta_measure(k)));
+%     x_predict(k) = xhat(1,k) + forwardTime*xhat(2,k) - r_est(k) * cos(theta_predict(k));
+%     x_predict1(k) = xhat(1,k) - r_est(k) * cos(theta_predict(k));
 %     plot xoy trojectory
 %     figure(1)
 %     subplot(2,1,1)
@@ -348,14 +293,16 @@ for i = 1:2
 end
 figure();
 plot(t,theta_measure, t,xhat(5,:))
-figure();
-plot(t, chisquare)
-figure();
-plot(t,theta_measure)
+% figure();
+% plot(t, chisquare)
+% figure();
+% plot(t,theta_measure)
 figure();
 plot(t,framex)
+title('x')
 figure();
 plot(t,framey)
+title('y')
 
 function ang = angle_process(input, theta)
 if abs(std_rad(input - theta)) < pi/4
