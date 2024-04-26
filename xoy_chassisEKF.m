@@ -82,29 +82,29 @@ end
 
 %% ekf init
 F = diag([1,1,1,1,1,1,1,1]);
-F(1,2) = dt;
-F(3,4) = dt;
-F(5,6) = dt;
+% F(1,2) = dt;
+% F(3,4) = dt;
+% F(5,6) = dt;
 
 Pinit = diag([1,1,1,1,1,1,1,1])*0.1;
 P = Pinit;
 
 process_noise = [0.00001, 0.00001, 0.00005, 0.000001];
 Q = zeros(8,8);
-Q(1,1) = dt * dt * dt / 3 * process_noise(1);
-Q(1,2) = dt * dt / 2  * process_noise(1);
-Q(2,1) = dt * dt / 2  * process_noise(1);
-Q(2,2) = dt * process_noise(1);
-Q(3,3) = dt * dt * dt / 3 * process_noise(2);
-Q(3,4) = dt * dt / 2  * process_noise(2);
-Q(4,3) = dt * dt / 2  * process_noise(2);
-Q(4,4) = dt * process_noise(2);
-Q(5,5) = dt * dt * dt / 3 * process_noise(3);
-Q(5,6) = dt * dt / 2  * process_noise(3);
-Q(6,5) = dt * dt / 2  * process_noise(3);
-Q(6,6) = dt * process_noise(3);
-Q(7,7) = dt * process_noise(4);
-Q(8,8) = dt * process_noise(4);
+% Q(1,1) = dt * dt * dt / 3 * process_noise(1);
+% Q(1,2) = dt * dt / 2  * process_noise(1);
+% Q(2,1) = dt * dt / 2  * process_noise(1);
+% Q(2,2) = dt * process_noise(1);
+% Q(3,3) = dt * dt * dt / 3 * process_noise(2);
+% Q(3,4) = dt * dt / 2  * process_noise(2);
+% Q(4,3) = dt * dt / 2  * process_noise(2);
+% Q(4,4) = dt * process_noise(2);
+% Q(5,5) = dt * dt * dt / 3 * process_noise(3);
+% Q(5,6) = dt * dt / 2  * process_noise(3);
+% Q(6,5) = dt * dt / 2  * process_noise(3);
+% Q(6,6) = dt * process_noise(3);
+% Q(7,7) = dt * process_noise(4);
+% Q(8,8) = dt * process_noise(4);
 sigmaSqY = 0.005;
 sigmaSqTheta = 0.0001;
 sigmaSqYaw = 0.0025;
@@ -143,10 +143,26 @@ switch_count = 0;
 %%
 for k = 2:N
     % 量测噪声更新
-%     F(1,2) = dt;
-%     F(3,4) = dt;
-%     F(5,6) = dt;
-%     
+    dt = deltaT(k-1);
+    F(1,2) = dt;
+    F(3,4) = dt;
+    F(5,6) = dt;
+    
+    Q(1,1) = dt * dt * dt / 3 * process_noise(1);
+    Q(1,2) = dt * dt / 2  * process_noise(1);
+    Q(2,1) = dt * dt / 2  * process_noise(1);
+    Q(2,2) = dt * process_noise(1);
+    Q(3,3) = dt * dt * dt / 3 * process_noise(2);
+    Q(3,4) = dt * dt / 2  * process_noise(2);
+    Q(4,3) = dt * dt / 2  * process_noise(2);
+    Q(4,4) = dt * process_noise(2);
+    Q(5,5) = dt * dt * dt / 3 * process_noise(3);
+    Q(5,6) = dt * dt / 2  * process_noise(3);
+    Q(6,5) = dt * dt / 2  * process_noise(3);
+    Q(6,6) = dt * process_noise(3);
+    Q(7,7) = dt * process_noise(4);
+    Q(8,8) = dt * process_noise(4);
+
     
     theta_dot(k) = theta_dot(1);
     center_x_dot(k) = 3*cos(0.3*pi*k*dt)*0-1*0;
