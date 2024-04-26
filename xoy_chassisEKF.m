@@ -42,43 +42,9 @@ height = zeros(1,N);
 r = zeros(1,N);
 theta_measure = zeros(1,N);
 
-if abs(std_rad(theta(1)-center_angle(1))) < pi/4
-    theta_measure(1) = theta(1);
-    height(1) = height0(1);
-    r(1) = r0;
-    pos(:,1) = [center_x(1) - r0 * cos(theta(1)),...
-        center_y(1) - r0 * sin(theta(1)),...
-        height0(1)];
-elseif abs(std_rad(theta(1)+pi/2-center_angle(1))) < pi/4
-    theta_measure(1) = theta(1)+pi/2;
-    height(1) = height1(1);
-    r(1) = r1;
-    pos(:,1) = [center_x(1) - r1 * cos(theta(1)+pi/2),...
-        center_y(1) - r1 * sin(theta(1)+pi/2),...
-        height1(1)];
-elseif abs(std_rad(theta(1)+pi-center_angle(1))) < pi/4
-    theta_measure(1) = theta(1)+pi;
-    height(1) = height0(1);
-    r(1) = r0;
-    pos(:,1) = [center_x(1) - r0 * cos(theta(1)+pi),...
-        center_y(1) - r0 * sin(theta(1)+pi),...
-        height0(1)];
-else
-    height(1) = height1(1);
-    r(1) = r1;
-    theta_measure(1) = theta(1)-pi/2;
-    pos(:,1) = [center_x(1) - r1 * cos(theta(1)-pi/2),...
-        center_y(1) - r1 * sin(theta(1)-pi/2),...
-        height1(1)];
-end
-% theta_measure(1) = theta(1);
-% r(1) = r0;
-% pos(:,1) = [center_x(1) - r0 * cos(theta_measure(1)),...
-%     center_y(1) - r0 * sin(theta_measure(1)),...
-%     height0(1)];
-    pos(1,1) = framex(1);
-    pos(2,1) = framey(1);
-    theta_measure(1) = std_rad(tgttheta(1));
+pos(1,1) = framex(1);
+pos(2,1) = framey(1);
+theta_measure(1) = std_rad(tgttheta(1));
 
 %% ekf init
 F = diag([1,1,1,1,1,1,1,1]);
@@ -89,7 +55,7 @@ F = diag([1,1,1,1,1,1,1,1]);
 Pinit = diag([1,1,1,1,1,1,1,1])*0.1;
 P = Pinit;
 
-process_noise = [0.00001, 0.00001, 0.00005, 0.000001];
+process_noise = [0.0000001, 0.0000001, 0.0001, 0.000000001];
 Q = zeros(8,8);
 % Q(1,1) = dt * dt * dt / 3 * process_noise(1);
 % Q(1,2) = dt * dt / 2  * process_noise(1);
@@ -105,9 +71,9 @@ Q = zeros(8,8);
 % Q(6,6) = dt * process_noise(3);
 % Q(7,7) = dt * process_noise(4);
 % Q(8,8) = dt * process_noise(4);
-sigmaSqY = 0.005;
-sigmaSqTheta = 0.0001;
-sigmaSqYaw = 0.0025;
+sigmaSqY = 0.0005;%0.005
+sigmaSqTheta = 0.00005;
+sigmaSqYaw = 0.001;%0.0025
 
 R = diag([1,1,1]);
 
@@ -185,9 +151,9 @@ for k = 2:N
     % theta_ represent the theta prior estimation match the armor
     theta__ = angle_process(xhatminus(5,k), theta_measure(k));
 
-    y = pos(2,k);
-    theta_temp = atan2(pos(1,k), pos(2,k));
-    tantheta = pos(1,k) / pos(2,k);
+    y = pos(1,k);
+    theta_temp = atan2(pos(2,k), pos(1,k));
+    tantheta = pos(2,k) / pos(1,k);
     costheta = cos(theta_temp);
     Rc = zeros(2,2);
     Rc(1,1) = sigmaSqY * tantheta * tantheta + sigmaSqTheta * y * y / costheta^4;
@@ -218,9 +184,6 @@ for k = 2:N
     hx = [c_x_ - r_ * cos(theta__);
         c_y_ - r_ * sin(theta__);
         theta_];
-    pos_est(:,k) = [xhatminus(1,k) - xhatminus(7,k) * cos(theta__),...
-        xhatminus(3,k) - xhatminus(7,k) * sin(theta__),...
-        0];
     
     err = z(:,k)-hx;
     err(3) = std_rad(err(3));
@@ -231,36 +194,16 @@ for k = 2:N
 
     xhat(5,k) = std_rad(xhat(5,k));
 
-%     if xhat(9,k) < 0.1
-%         xhat(9,k) = 0.1;
-%     end
-%     pos_est(:,k) = [xhat(1,k) - xhat(9,k) * cos(xhat(7,k)),...
-%         xhat(3,k) - xhat(9,k) * sin(xhat(7,k)),...
-%         xhat(5,k)];
     theta_est(k) = std_rad(xhat(5,k));
     if mod(switch_count,2) == 0
         r_est(k) = xhat(7,k);
     else
         r_est(k) = xhat(8,k);
     end
-
-%     forwardTime = 0.0;
-%     theta_predict(k) = xhat(5,k) + forwardTime*xhat(6,k);
-%     theta_predict(k) = std_rad(theta_predict(k));
-%     theta_predict(k) = angle_process(theta_predict(k),theta_measure(k));
-%     x_armor(k) = xhat(1,k) - xhat(7,k)*cos(angle_process(theta_est(k),theta_measure(k)));
-%     x_predict(k) = xhat(1,k) + forwardTime*xhat(2,k) - r_est(k) * cos(theta_predict(k));
-%     x_predict1(k) = xhat(1,k) - r_est(k) * cos(theta_predict(k));
-%     plot xoy trojectory
-%     figure(1)
-%     subplot(2,1,1)
-%     plot(pos(1,1:k),pos(2,1:k),center_x(1:k),center_y(1:k))
-%     grid on;
-%     xlim([-5,5])
-%     ylim([-5,5])
-%     subplot(2,1,2)
-%     plot(t(1:k),xhat(6,1:k))
-%     pause(0.001);
+    
+    pos_est(:,k) = [xhat(1,k) - r_est(k) * cos(angle_process(xhat(5,k), theta_measure(k))),...
+            xhat(3,k) - r_est(k) * sin(angle_process(xhat(5,k), theta_measure(k))),...
+            0];
 end
 
 %%
