@@ -26,6 +26,7 @@ theta_predict = zeros(1,N);
 x_predict = zeros(1,N);
 x_predict1 = zeros(1,N);
 x_armor = zeros(1,N);
+theta_measure = zeros(1,N);
 r0 = 0.23;
 r1 = 0.18+0.05*0;
 
@@ -39,10 +40,18 @@ F = diag([1,1,1,1,1,1,1,1]);
 % F(3,4) = dt;
 % F(5,6) = dt;
 
-Pinit = diag([1,1,1,1,1,1,1,1])*0.1;
+Pinit = diag([1,1,1,1,1,1,1,1])*0.001;
+Pinit = [0.0005, 0, 0, 0, 0, 0, 0, 0;
+    0, 0.0005, 0, 0, 0, 0, 0, 0;
+    0, 0, 0.0005, 0, 0, 0, 0, 0;
+    0, 0, 0, 0.0005, 0, 0, 0, 0;
+    0, 0, 0, 0, 0.01, 0, 0, 0;
+    0, 0, 0, 0, 0, 0.1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0.001, 0,
+    0, 0, 0, 0, 0, 0, 0, 0.001];
 P = Pinit;
 
-process_noise = [0.0000001, 0.0000001, 0.0001, 0.000000001];
+process_noise = [0.0001, 0.0001, 0.0001, 0.000001];
 Q = zeros(8,8);
 % Q(1,1) = dt * dt * dt / 3 * process_noise(1);
 % Q(1,2) = dt * dt / 2  * process_noise(1);
@@ -58,9 +67,9 @@ Q = zeros(8,8);
 % Q(6,6) = dt * process_noise(3);
 % Q(7,7) = dt * process_noise(4);
 % Q(8,8) = dt * process_noise(4);
-sigmaSqY = 0.0005;%0.005
-sigmaSqTheta = 0.00005;
-sigmaSqYaw = 0.001;%0.0025
+sigmaSqY = 0.01;%0.005
+sigmaSqTheta = 0.0001;
+sigmaSqYaw = 0.0025;%0.0025
 
 R = diag([1,1,1]);
 
