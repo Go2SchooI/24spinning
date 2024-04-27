@@ -4,13 +4,13 @@ dt = 0.005;
 N = 3000;
 t = 0:dt:dt*N-dt;
 
-deltaT1 = table2array(in(1:N,1));
-deltaT2 = table2array(in(2:N+1,1));
+deltaT1 = table2array(in(3:N+2,1));
+deltaT2 = table2array(in(4:N+3,1));
 deltaT = (deltaT2 - deltaT1)*1e-9;
 
-tgttheta = pi/2 - table2array(in(1:N,4));
-framey = table2array(in(1:N,2));
-framex = table2array(in(1:N,3));
+tgttheta = pi/2 - table2array(in(3:N+2,4));
+framey = table2array(in(3:N+2,2));
+framex = table2array(in(3:N+2,3));
 %% target init
 center_x = zeros(1,N);
 center_y = zeros(1,N);
@@ -51,7 +51,7 @@ Pinit = [0.0005, 0, 0, 0, 0, 0, 0, 0;
     0, 0, 0, 0, 0, 0, 0, 0.001];
 P = Pinit;
 
-process_noise = [0.0001, 0.0001, 0.0001, 0.000001];
+process_noise = [0.0005, 0.0005, 0.0001, 0.0000005];
 Q = zeros(8,8);
 % Q(1,1) = dt * dt * dt / 3 * process_noise(1);
 % Q(1,2) = dt * dt / 2  * process_noise(1);
@@ -67,7 +67,7 @@ Q = zeros(8,8);
 % Q(6,6) = dt * process_noise(3);
 % Q(7,7) = dt * process_noise(4);
 % Q(8,8) = dt * process_noise(4);
-sigmaSqY = 0.0025;%0.005
+sigmaSqY = 0.003;%0.005
 sigmaSqTheta = 0.0001;
 sigmaSqYaw = 0.0025;%0.0025
 
@@ -134,7 +134,7 @@ for k = 2:N
     xhatminus(5,k) = std_rad(xhatminus(5,k));
 
     chisquare(k) = std_rad(theta_measure(k) - theta_measure(k-1))^2;
-    if chisquare(k) > 1.375
+    if chisquare(k) > 1.35
         switch_count = switch_count + 1;
     end
     % theta_z represent the angle in z vector
