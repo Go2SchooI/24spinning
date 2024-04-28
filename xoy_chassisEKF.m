@@ -4,11 +4,14 @@ dt = 0.005;
 N = 3000;
 t = 0:dt:dt*N-dt;
 
+file_path = 'D:/RoboMaster2024/spinning_data/move_spinning.csv';
+in = readtable(file_path);
+
 deltaT1 = table2array(in(3:N+2,1));
 deltaT2 = table2array(in(4:N+3,1));
 deltaT = (deltaT2 - deltaT1)*1e-9;
 
-tgttheta = pi/2 - table2array(in(3:N+2,4));
+tgttheta = pi/2 - table2array(in(3:N+2,5));
 framey = table2array(in(3:N+2,2));
 framex = table2array(in(3:N+2,3));
 %% target init
@@ -25,6 +28,8 @@ theta_dot = zeros(1,N);
 theta_predict = zeros(1,N);
 x_predict = zeros(1,N);
 x_predict1 = zeros(1,N);
+x_center_pre = zeros(1,N);
+y_center_pre = zeros(1,N);
 x_armor = zeros(1,N);
 theta_measure = zeros(1,N);
 r0 = 0.23;
@@ -40,46 +45,25 @@ F = diag([1,1,1,1,1,1,1,1]);
 % F(3,4) = dt;
 % F(5,6) = dt;
 
-% Pinit = diag([1,1,1,1,1,1,1,1])*0.001;
-Pinit = [0.0005, 0, 0, 0, 0, 0, 0, 0;
-    0, 0.0005, 0, 0, 0, 0, 0, 0;
-    0, 0, 0.0005, 0, 0, 0, 0, 0;
-    0, 0, 0, 0.0005, 0, 0, 0, 0;
+% Pinit = diag([1,1,1,1,1,1,1,1])*0.003;
+Pinit = [0.001, 0, 0, 0, 0, 0, 0, 0;
+    0, 0.001, 0, 0, 0, 0, 0, 0;
+    0, 0, 0.001, 0, 0, 0, 0, 0;
+    0, 0, 0, 0.001, 0, 0, 0, 0;
     0, 0, 0, 0, 0.01, 0, 0, 0;
     0, 0, 0, 0, 0, 0.01, 0, 0;
-    0, 0, 0, 0, 0, 0, 0.001, 0;
-    0, 0, 0, 0, 0, 0, 0, 0.001];
+    0, 0, 0, 0, 0, 0, 0.0003, 0;
+    0, 0, 0, 0, 0, 0, 0, 0.0003];
 P = Pinit;
 
-process_noise = [0.0005, 0.0005, 0.0001, 0.0000005];
+process_noise = [0.001, 0.001, 0.0001, 0.0000001];
 Q = zeros(8,8);
-% Q(1,1) = dt * dt * dt / 3 * process_noise(1);
-% Q(1,2) = dt * dt / 2  * process_noise(1);
-% Q(2,1) = dt * dt / 2  * process_noise(1);
-% Q(2,2) = dt * process_noise(1);
-% Q(3,3) = dt * dt * dt / 3 * process_noise(2);
-% Q(3,4) = dt * dt / 2  * process_noise(2);
-% Q(4,3) = dt * dt / 2  * process_noise(2);
-% Q(4,4) = dt * process_noise(2);
-% Q(5,5) = dt * dt * dt / 3 * process_noise(3);
-% Q(5,6) = dt * dt / 2  * process_noise(3);
-% Q(6,5) = dt * dt / 2  * process_noise(3);
-% Q(6,6) = dt * process_noise(3);
-% Q(7,7) = dt * process_noise(4);
-% Q(8,8) = dt * process_noise(4);
+
 sigmaSqY = 0.003;%0.005
-sigmaSqTheta = 0.0001;
-sigmaSqYaw = 0.0025;%0.0025
+sigmaSqTheta = 0.00025;
+sigmaSqYaw = 0.001;%0.0025
 
 R = diag([1,1,1]);
-
-% P = diag([1,1,1,1,1,1,1,1,1]);
-% Q = diag([1e-2,5e-2,1e-2,5e-2,1e-2,1e-4,2e-2,4e-2,1e-3]);
-% R = diag([0.1,0.1,0.1,0.2]);
-
-% P = diag([1,1,1,1,1,1,1,1,1])*0.01;
-% Q = diag([0.1,100,0.1,100,0.1,0.0001,0.2,200,0.001]);
-% R = diag([50,50,10,100]);
 
 H = zeros(3,8);
 H(1,1) = 1;
@@ -134,7 +118,7 @@ for k = 2:N
     xhatminus(5,k) = std_rad(xhatminus(5,k));
 
     chisquare(k) = std_rad(theta_measure(k) - theta_measure(k-1))^2;
-    if chisquare(k) > 1.35
+    if chisquare(k) > 1.85
         switch_count = switch_count + 1;
     end
     % theta_z represent the angle in z vector
@@ -197,18 +181,30 @@ for k = 2:N
         r_est(k) = xhat(8,k);
     end
     
-    pos_est(:,k) = [xhat(1,k) - r_est(k) * cos(angle_process(xhat(5,k), theta_measure(k))),...
-            xhat(3,k) - r_est(k) * sin(angle_process(xhat(5,k), theta_measure(k))),...
+    pos_est(:,k) = [xhat(1,k) - r_est(k) * cos(angle_process(theta_est(k), theta_measure(k))),...
+            xhat(3,k) - r_est(k) * sin(angle_process(theta_est(k), theta_measure(k))),...
             0];
+    
+    % 预测效果 
+    forwardTime = 0.3;
+    theta_predict(k) = xhat(5,k) + forwardTime*xhat(6,k);
+    theta_predict(k) = std_rad(theta_predict(k));
+    theta_predict(k) = angle_process(theta_predict(k),theta_measure(k));
+    
+    x_armor(k) = xhat(1,k) - r_est(k)*cos(angle_process(theta_est(k),theta_measure(k)));
+    x_center_pre(k) = xhat(1,k) + forwardTime*xhat(2,k);
+    y_center_pre(k) = xhat(3,k) + forwardTime*xhat(4,k);
+    x_predict(k) = xhat(1,k) + forwardTime*xhat(2,k) - r_est(k) * cos(theta_predict(k));
+    x_predict1(k) = xhat(1,k) - r_est(k) * cos(theta_predict(k));
 end
 
 %%
 figure();
 subplot(3,3,1)
-plot(t,xhat(1,:))
+plot(t,xhat(1,:),t,x_center_pre)
 title('center x')
 subplot(3,3,2)
-plot(t,xhat(3,:))
+plot(t,xhat(3,:),t,y_center_pre)
 title('center y')
 subplot(3,3,3)
 plot(t,xhat(5,:))
@@ -234,8 +230,6 @@ figure();
 plot(t,theta_measure, t,xhat(5,:))
 figure();
 plot(t, chisquare)
-% figure();
-% plot(t,theta_measure)
 figure();
 plot(t,framex)
 title('x')
