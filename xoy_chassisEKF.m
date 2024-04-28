@@ -1,10 +1,10 @@
 %% timeline init
 
 dt = 0.005;
-N = 3000;
+N = 4000;
 t = 0:dt:dt*N-dt;
 
-file_path = 'D:/RoboMaster2024/spinning_data/move_spinning.csv';
+file_path = 'D:/RoboMaster2024/spinning_data/spinning2.csv';
 in = readtable(file_path);
 
 deltaT1 = table2array(in(3:N+2,1));
@@ -56,12 +56,12 @@ Pinit = [0.001, 0, 0, 0, 0, 0, 0, 0;
     0, 0, 0, 0, 0, 0, 0, 0.0003];
 P = Pinit;
 
-process_noise = [0.001, 0.001, 0.0001, 0.0000001];
+process_noise = [0.001, 0.001, 0.001, 0.000001];
 Q = zeros(8,8);
 
 sigmaSqY = 0.003;%0.005
 sigmaSqTheta = 0.00025;
-sigmaSqYaw = 0.001;%0.0025
+sigmaSqYaw = 0.00025;%0.0025
 
 R = diag([1,1,1]);
 
@@ -118,7 +118,7 @@ for k = 2:N
     xhatminus(5,k) = std_rad(xhatminus(5,k));
 
     chisquare(k) = std_rad(theta_measure(k) - theta_measure(k-1))^2;
-    if chisquare(k) > 1.85
+    if chisquare(k) > 1.75
         switch_count = switch_count + 1;
     end
     % theta_z represent the angle in z vector
@@ -186,7 +186,7 @@ for k = 2:N
             0];
     
     % 预测效果 
-    forwardTime = 0.3;
+    forwardTime = 0.4;
     theta_predict(k) = xhat(5,k) + forwardTime*xhat(6,k);
     theta_predict(k) = std_rad(theta_predict(k));
     theta_predict(k) = angle_process(theta_predict(k),theta_measure(k));
