@@ -1,23 +1,24 @@
 %% timeline init
 
-dt = 0.005;
-N = 500;
+dt = 0.008;
+N = 2000;
+init_index = 1;
 t = 0:dt:dt*N-dt;
 
-file_path = 'D:/RoboMaster2024/spinning_data/spinning3.csv';
+file_path = 'D:/RoboMaster2024/24spinning/spinning_data/gimbal_stay.csv';
 in = readtable(file_path);
 
-deltaT1 = table2array(in(3:N+2,1));
-deltaT2 = table2array(in(4:N+3,1));
+deltaT1 = table2array(in(init_index:N+init_index-1,1));
+deltaT2 = table2array(in(init_index+1:N+init_index,1));
 deltaT = (deltaT2 - deltaT1)*1e-9;
 
-yaw1 = pi/2 - table2array(in(3:N+2,5));
-yaw2 = pi/2 - table2array(in(3:N+2,6));
+yaw1 = pi/2 - table2array(in(init_index:N+init_index-1,5));
+yaw2 = pi/2 - table2array(in(init_index:N+init_index-1,6));
 yaw_error = zeros(1,N);
 yaw_error2 = zeros(1,N);
 
-framey = table2array(in(3:N+2,2));
-framex = table2array(in(3:N+2,3));
+framey = table2array(in(init_index:N+init_index-1,2));
+framex = table2array(in(init_index:N+init_index-1,3));
 %% target init
 center_x = zeros(1,N);
 center_y = zeros(1,N);
@@ -37,6 +38,7 @@ x_center_pre = zeros(1,N);
 y_center_pre = zeros(1,N);
 theta_measure = zeros(1,N);
 theta_pre = zeros(1,N);
+pos = zeros(2,N);
 
 pos(1,1) = framex(1);
 pos(2,1) = framey(1);
@@ -48,23 +50,23 @@ F = diag([1,1,1,1,1,1,1,1]);
 % F(3,4) = dt;
 % F(5,6) = dt;
 
-Pinit = diag([1,1,1,1,1,1,1,1])*1000000;
-% Pinit = [0.001, 0, 0, 0, 0, 0, 0, 0;
-%     0, 0.001, 0, 0, 0, 0, 0, 0;
-%     0, 0, 0.001, 0, 0, 0, 0, 0;
-%     0, 0, 0, 0.001, 0, 0, 0, 0;
-%     0, 0, 0, 0, 0.01, 0, 0, 0;
-%     0, 0, 0, 0, 0, 0.01, 0, 0;
-%     0, 0, 0, 0, 0, 0, 0.0003, 0;
-%     0, 0, 0, 0, 0, 0, 0, 0.0003];
+% Pinit = diag([1,1,1,1,1,1,1,1])*1000000;
+Pinit = [0.001, 0, 0, 0, 0, 0, 0, 0;
+    0, 0.001, 0, 0, 0, 0, 0, 0;
+    0, 0, 0.001, 0, 0, 0, 0, 0;
+    0, 0, 0, 0.001, 0, 0, 0, 0;
+    0, 0, 0, 0, 0.01, 0, 0, 0;
+    0, 0, 0, 0, 0, 0.01, 0, 0;
+    0, 0, 0, 0, 0, 0, 0.0003, 0;
+    0, 0, 0, 0, 0, 0, 0, 0.0003];
 P = Pinit;
 
-process_noise = [0.001, 0.001, 0.001, 0.0000001];
+process_noise = [0.0001, 0.0001, 0.001, 0.000001];
 Q = zeros(8,8);
 
-sigmaSqY = 0.003;%0.005
-sigmaSqTheta = 0.00025;
-sigmaSqYaw = 0.0001;%0.0025
+sigmaSqY = 0.005;%0.005
+sigmaSqTheta = 0.0001;
+sigmaSqYaw = 0.0005;%0.0025
 
 R = diag([1,1,1]);
 
@@ -84,8 +86,8 @@ r_est = zeros(1,N);
 r_init = 0.25;
 r_buf = r_init;
 xhat(:,1) = [pos(1,1),0,pos(2,1),0,theta_measure(1),0,r_init,r_init].';
-pos_est(:,1) = [xhat(1,1) - xhat(7,1) * cos(xhat(5,1)),...
-    xhat(3,1) - xhat(7,1) * sin(xhat(5,1)),...
+pos_est(:,1) = [xhat(1,1) - 0*xhat(7,1) * cos(xhat(5,1)),...
+    xhat(3,1) - 0*xhat(7,1) * sin(xhat(5,1)),...
     0];
 theta_est(1) = std_rad(xhat(5,1));
 switch_count = 0;
@@ -126,12 +128,11 @@ for k = 2:N
     xhatminus(5,k) = std_rad(xhatminus(5,k));
 
     chisquare(k) = std_rad(theta_measure(k) - theta_measure(k-1))^2;
-    if chisquare(k) > 1.8
+    if chisquare(k) > 1.35
         switch_count = switch_count + 1;
     end
     % theta_z represent the angle in z vector
     theta_z = angle_process(theta_measure(k), xhat(5,k-1));
-    theta_z2 = angle_process(std_rad(yaw2(k)), xhat(5,k-1));
     
     z(:,k) = [pos(1,k), pos(2,k), theta_z];
     c_x_ = xhatminus(1,k);
@@ -177,8 +178,8 @@ for k = 2:N
     
     err = z(:,k)-hx;
     err(3) = std_rad(err(3));
-    yaw_error(k) = err(3);
-    yaw_error2(k) = std_rad(theta_z2 - theta_);
+%     yaw_error(k) = err(3);
+%     yaw_error2(k) = std_rad(theta_z2 - theta_);
 %     if(abs(yaw_error2(k))<err(3))
 %         err(3) = yaw_error2(k);
 %     end
@@ -237,11 +238,11 @@ title('theta dot')
 subplot(3,3,9)
 plot(t,r_est)
 title('r')
-% figure(2);
-% for i = 1:2
-%     subplot(2,1,i)
-%     plot(t,pos(i,:),t,pos_est(i,:))
-% end
+figure(2);
+for i = 1:2
+    subplot(2,1,i)
+    plot(t,pos(i,:),t,pos_est(i,:))
+end
 figure(3);
 plot(t,theta_measure, t,xhat(5,:))
 figure(4);
@@ -253,13 +254,9 @@ figure(6);
 plot(t,framey)
 title('y')
 figure(7);
-plot(t,yaw1,t,yaw2);
+plot(t,yaw1);
 figure(8);
-plot(t,yaw1,t,yaw_error,t,yaw_error2);
-% figure(8);
-% plot(t,rad2deg(theta_pre));
-% figure(9);
-% plot(t,abs(xhat(5,k-1)-yaw1(k)),t,abs(xhat(5,k-1)-yaw2(k))
+plot(t,deltaT)
 
 function ang = angle_process(input, theta)
 if abs(std_rad(input - theta)) < pi/4
