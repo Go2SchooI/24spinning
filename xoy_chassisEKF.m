@@ -5,7 +5,7 @@ N = 2000;
 init_index = 1;
 t = 0:dt:dt*N-dt;
 
-file_path = 'D:/RoboMaster2024/24spinning/spinning_data/gimbal_stay.csv';
+file_path = 'D:/RoboMaster2024/24spinning/spinning_data/move_spinning.csv';
 in = readtable(file_path);
 
 deltaT1 = table2array(in(init_index:N+init_index-1,1));
@@ -61,7 +61,7 @@ Pinit = [0.001, 0, 0, 0, 0, 0, 0, 0;
     0, 0, 0, 0, 0, 0, 0, 0.0003];
 P = Pinit;
 
-process_noise = [0.0001, 0.0001, 0.001, 0.000001];
+process_noise = [0.001, 0.001, 0.001, 0.000001];
 Q = zeros(8,8);
 
 sigmaSqY = 0.005;%0.005
@@ -79,6 +79,9 @@ xhat = zeros(8,N);
 xhatminus = zeros(8,N);
 z = zeros(3,N);
 chisquare = zeros(1,N);
+chisquare_chassis = zeros(1,N);
+chisquare_x = zeros(1,N);
+chisquare_y = zeros(1,N);
 pos_est = zeros(3,N);
 theta_est = zeros(1,N);
 r_est = zeros(1,N);
@@ -91,6 +94,8 @@ pos_est(:,1) = [xhat(1,1) - 0*xhat(7,1) * cos(xhat(5,1)),...
     0];
 theta_est(1) = std_rad(xhat(5,1));
 switch_count = 0;
+switch_k = 0;
+switch_count_plot = zeros(1,N);
 %%
 for k = 2:N
     % 量测噪声更新
@@ -116,21 +121,26 @@ for k = 2:N
     
     pos(1,k) = framex(k);
     pos(2,k) = framey(k);
-    
-%     if(abs(yaw1(k-1)-yaw1(k))<abs(yaw1(k-1)-yaw2(k)))
+
     theta_measure(k) = std_rad(yaw1(k));
-%     else
-%     theta_measure(k) = std_rad(yaw2(k));
-%     end
     
     xhatminus(:,k) = F*xhat(:,k-1);
     Pminus= F*P*F'+Q;
     xhatminus(5,k) = std_rad(xhatminus(5,k));
 
     chisquare(k) = std_rad(theta_measure(k) - theta_measure(k-1))^2;
-    if chisquare(k) > 1.35
+    chisquare_x(k) = (pos(1,k) - pos(1,k-1))^2;
+    chisquare_y(k) = (pos(2,k) - pos(2,k-1))^2;
+    
+    skip3 = 0;
+    if (chisquare(k) > 1.25 && k - switch_k > 20)
         switch_count = switch_count + 1;
+        switch_k = k;
+    elseif(chisquare(k) > 1.25 && k - switch_k < 20)
+        skip3 = 1;
     end
+    switch_count_plot(k) = switch_count;
+    
     % theta_z represent the angle in z vector
     theta_z = angle_process(theta_measure(k), xhat(5,k-1));
     
@@ -178,15 +188,21 @@ for k = 2:N
     
     err = z(:,k)-hx;
     err(3) = std_rad(err(3));
-%     yaw_error(k) = err(3);
-%     yaw_error2(k) = std_rad(theta_z2 - theta_);
-%     if(abs(yaw_error2(k))<err(3))
-%         err(3) = yaw_error2(k);
-%     end
     
-    K = Pminus*H'/( H*Pminus*H'+ R);
-    xhat(:,k) = xhatminus(:,k)+K*err;
-    P = (eye(8)-K*H)*Pminus;
+    D = H*Pminus*H'+ R;
+    chisquare_chassis(k) = err' * pinv(D) * err;
+    chi1(k) = err(1)* err(1);
+    chi2(k) = err(2)* err(2);
+    chi3(k) = err(3)* err(3);
+    
+    if(skip3)
+        xhat(:,k) = xhatminus(:,k);
+        P = Pminus;
+    else
+        K = Pminus*H'/( H*Pminus*H'+ R);
+        xhat(:,k) = xhatminus(:,k)+K*err;
+        P = (eye(8)-K*H)*Pminus;
+    end
 
     xhat(5,k) = std_rad(xhat(5,k));
 
@@ -196,7 +212,10 @@ for k = 2:N
     else
         r_est(k) = xhat(8,k);
     end
-    
+%     
+%     if(r_est(k)<0.15 || r_est(k)>0.3)
+%         r_est(k) = 0.23;
+%     end
     pos_est(:,k) = [xhat(1,k) - r_est(k) * cos(angle_process(theta_est(k), theta_measure(k))),...
             xhat(3,k) - r_est(k) * sin(angle_process(theta_est(k), theta_measure(k))),...
             0];
@@ -218,10 +237,10 @@ end
 %%
 figure(1);
 subplot(3,3,1)
-plot(t,xhat(1,:),t,x_center_pre)
+plot(t,xhat(1,:))
 title('center x')
 subplot(3,3,2)
-plot(t,xhat(3,:),t,y_center_pre)
+plot(t,xhat(3,:))
 title('center y')
 subplot(3,3,3)
 plot(t,xhat(5,:))
@@ -257,6 +276,18 @@ figure(7);
 plot(t,yaw1);
 figure(8);
 plot(t,deltaT)
+figure(9);
+plot(t, chisquare)
+figure(10);
+plot(t, chisquare_chassis)
+% figure(11);
+% plot(t, chi1)
+% figure(12);
+% plot(t, chi2)
+% figure(13);
+% plot(t, chi3)
+figure(12);
+plot(t, switch_count_plot)
 
 function ang = angle_process(input, theta)
 if abs(std_rad(input - theta)) < pi/4
